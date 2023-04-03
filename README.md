@@ -30,8 +30,9 @@ First you must make sure that your device's clock is correctly setup.
 Otherwise the compilation will fail.
 
 In the AutofocusPlugin folder do:
-    - bash autogen.sh
-    - make
+
+	bash autogen.sh
+	make
 
 # Install
 
