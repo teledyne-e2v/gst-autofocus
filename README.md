@@ -25,13 +25,13 @@ Then the second phase is like the naive algorithm but it uses the pda range foun
 This technic, if the step for both phases is well tuned, can achieve similar results to the naive algorithm, but much quicker.
 
 # Compilation
-
 First you must make sure that your device's clock is correctly setup.
 Otherwise the compilation will fail.
 
 In the AutofocusPlugin folder do:
-    - bash autogen.sh
-    - make
+
+	bash autogen.sh
+	make
 
 # Install
 
@@ -42,7 +42,7 @@ To test if the plugin has been correctly install, do:
 	export GST_PLUGIN_PATH=/usr/local/lib/gstreamer-1.0/
 	gst-inspect-1.0 autofocus
 
-If the plugin failed to install the following message will be displayed: "No such element or plugin 'autofocus'"
+If the plugin failed to install the following message will be displayed: ```No such element or plugin 'autofocus'```
 
 # Uninstall
 
