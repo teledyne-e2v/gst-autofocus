@@ -130,11 +130,20 @@ long int unbiasedSharpnessThread(guint8 *imgMat, int width, ROI roi)
 
         params[i].threadsROI.x = roi.x;
         params[i].threadsROI.y = roi.y + (params[i].threadsROI.height * i);
-
+	
         params[i].imgMat  = imgMat;
         params[i].width   = width;
         params[i].result  = 0;
         params[i].average = 0;
+	if(params[i].threadsROI.width + params[i].threadsROI.x > 1916)
+	{
+		params[i].threadsROI.width = 1916 - params[i].threadsROI.x;
+	}
+
+	if(params[i].threadsROI.height + params[i].threadsROI.y > 1076)
+	{
+		params[i].threadsROI.height = 1076 - params[i].threadsROI.y;
+	}
 
         pthread_create(&threads[i], NULL, unbiasedSharpnessMono, (void *)&params[i]);
     }
