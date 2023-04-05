@@ -142,7 +142,7 @@ static void gst_autofocus_get_property(GObject *object, guint prop_id,
 
 static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuffer *buf);
 
-static void gst_autofocus_finalize(GObject *object);
+static void gst_autofocus_finalize();//GObject *object);
 
 #define TYPE_AUTOFOCUS_STATUS (autofocus_status_get_type())
 static GType
@@ -232,8 +232,12 @@ void *autofocusHandler(void *autofocus)
         while (listen)
         {
             char input;
-            scanf(" %c", &input);
-
+	    int res;
+            res = scanf(" %c", &input);
+	    if(res!=1)
+	    {
+		g_print("Scanf failed, check input ");
+	    }
             if (input == 'a' && focus->autofocusStatus == COMPLETED)
             {
                 focus->autofocusStatus = PENDING;
@@ -242,7 +246,11 @@ void *autofocusHandler(void *autofocus)
             {
                 int newStrat;
                 g_print("Choose an other autofocus strategy: ");
-                scanf(" %d", &newStrat);
+                res = scanf(" %d", &newStrat);
+		if(res!=1)
+	    	{
+			g_print("Scanf failed, check input ");
+	    	}
                 if (newStrat < 0 || newStrat > 1)
                 {
                     g_print("\tError: unknown strategy\n");
@@ -829,7 +837,7 @@ static gboolean autofocus_init(GstPlugin *autofocus)
                                 GST_TYPE_AUTOFOCUS);
 }
 
-static void gst_autofocus_finalize(GObject *object)
+static void gst_autofocus_finalize()//GObject *object)
 {
     disable_VdacPda(devicepda, bus);
     i2c_close(bus);
