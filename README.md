@@ -24,6 +24,20 @@ Then the second phase is like the naive algorithm but it uses the pda range foun
 
 This technic, if the step for both phases is well tuned, can achieve similar results to the naive algorithm, but much quicker.
 
+# Dependencies
+
+The following libraries are required for this plugin.
+- v4l-utils
+- libv4l-dev
+- libgstreamer1.0-dev
+- libgstreamer-plugins-base1.0-dev
+
+Install them with: 
+
+```
+sudo apt install v4l-utils libv4l-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+```
+
 # Compilation
 First you must make sure that your device's clock is correctly setup.
 Otherwise the compilation will fail.
