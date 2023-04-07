@@ -328,7 +328,7 @@ static void gst_autofocus_class_init(GstautofocusClass *klass)
 
     g_object_class_install_property(gobject_class, PROP_PDA_MIN,
                                     g_param_spec_int("pda_min", "pda_min", "The minimal PDA value used for the autofocus algorithm",
-                                                     0, 750, 200, G_PARAM_READWRITE));
+                                                     -90, 750, -90, G_PARAM_READWRITE));
 
     g_object_class_install_property(gobject_class, PROP_PDA_MAX,
                                     g_param_spec_int("pda_max", "pda_max", "The maximal PDA value used for the autofocus algorithm",
@@ -446,7 +446,7 @@ static void gst_autofocus_init(Gstautofocus *autofocus)
     roi.width = 1920;
     roi.height = 1080;
 
-    conf.pdaMin = 200;
+    conf.pdaMin = -90;
     conf.pdaMax = 750;
     conf.pdaSmallStep = 8;
     conf.pdaBigStep = 63;
