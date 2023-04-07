@@ -4,25 +4,30 @@
 #include <stdlib.h>
 #include <string.h>
 
-void i2cInit(I2CDevice *device, I2CDevice *devicepda, int *bus)
+int i2cInit(I2CDevice *device, I2CDevice *devicepda, int *bus)
 {
 	char bus_name[32] = "/dev/i2c-6"; //<--bus 6
 	if ((*bus = i2c_open(bus_name)) == -1)
 	{
 
 		fprintf(stderr, "Open i2c bus:%s error!\n", bus_name);
-		exit(-3);
+		return -3;
 	}
 
 	printf("Bus %s open\n", bus_name);
 
 	/* Init i2c device */
+	printf("init device : \n");
+	
+
 	initDevice(device, *bus, 0x3D, 256, 1);
 
 	/* Init i2c devicepda */
 	initDevice(devicepda, *bus, 0x0C, 8, 1);
 
-	enable_VdacPda(*devicepda, *bus);
+	int err = enable_VdacPda(*devicepda, *bus);
+	return err;
+	
 }
 
 void initDevice(I2CDevice *device, int bus, int addr, int pageByte, int iaddrBytes)
@@ -53,7 +58,7 @@ int enable_VdacPda(I2CDevice device, int bus)
 	{
 		fprintf(stderr, "Can't write in %x reg!\n", registre);
 		i2c_close(bus);
-		exit(-3);
+		return(1);
 	}
 
 	return 0;
@@ -73,7 +78,7 @@ int disable_VdacPda(I2CDevice device, int bus)
 	{
 		fprintf(stderr, "Can't write in %x reg!\n", registre);
 		i2c_close(bus);
-		exit(-3);
+		return(-3);
 	}
 
 	printf("Disable i2c pda\n");
@@ -120,7 +125,7 @@ int write_VdacPda(I2CDevice device, int bus, int PdaRegValue)
 	{
 		fprintf(stderr, "Can't write in %x reg!\n", registre);
 		i2c_close(bus);
-		exit(-3);
+		return(-3);
 	}
 	// dumpPda50Reg(device, bus);
 	//  WRITE LSB
@@ -130,7 +135,7 @@ int write_VdacPda(I2CDevice device, int bus, int PdaRegValue)
 	{
 		fprintf(stderr, "Can't write in %x reg!\n", registre);
 		i2c_close(bus);
-		exit(-3);
+		return(-3);
 	}
 	// dumpPda50Reg(device, bus);
 	return 0;
@@ -169,7 +174,7 @@ int testPattern(I2CDevice device, int bus)
 	{
 		fprintf(stderr, "Can't write in %x reg!\n", reg);
 		i2c_close(bus);
-		exit(-3);
+		return(-3);
 	}
 
 	// read test pattern status
@@ -180,7 +185,7 @@ int testPattern(I2CDevice device, int bus)
 	{
 		fprintf(stderr, "Can't read in %x reg!\n", reg);
 		i2c_close(bus);
-		exit(-3);
+		return(-3);
 	}
 	else
 	{
@@ -200,7 +205,7 @@ int testPattern(I2CDevice device, int bus)
 	{
 		fprintf(stderr, "Can't write in %x reg!\n", reg);
 		i2c_close(bus);
-		exit(-3);
+		return(-3);
 	}
 
 	return 0;

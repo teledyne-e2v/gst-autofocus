@@ -104,6 +104,8 @@ struct _Gstautofocus
     gint pdaHoldCmd;
 };
 
+int i2c_err=0;
+
 struct _GstautofocusClass
 {
     GstElementClass parent_class;

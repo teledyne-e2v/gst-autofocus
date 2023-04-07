@@ -455,8 +455,9 @@ static void gst_autofocus_init(Gstautofocus *autofocus)
     conf.phase = PHASE_1;
     conf.debugLvl = MINIMAL;
 
-    i2cInit(&device, &devicepda, &bus);
-
+    i2c_err=i2cInit(&device, &devicepda, &bus);
+    if(!i2c_err)
+    {
     pthread_t thread;
 
     int rc;
@@ -465,6 +466,7 @@ static void gst_autofocus_init(Gstautofocus *autofocus)
         g_print("Error: unable to create thread, %d\n", rc);
         exit(-1);
     }
+}
 }
 
 static void gst_autofocus_set_property(GObject *object, guint prop_id,
@@ -653,8 +655,10 @@ static void gst_autofocus_get_property(GObject *object, guint prop_id,
  */
 static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuffer *buf)
 {
+	
     Gstautofocus *autofocus = GST_AUTOFOCUS(parent);
-
+if(!i2c_err)
+    {
     static struct timeval start, end;
 
     static long sharpness = -1;
@@ -815,7 +819,7 @@ static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuff
     {
         buffering--;
     }
-
+    }
     /* just push out the incoming buffer */
     return gst_pad_push(autofocus->srcpad, buf);
 }
