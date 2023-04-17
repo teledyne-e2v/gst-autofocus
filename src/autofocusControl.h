@@ -136,13 +136,13 @@ void checkPDABounds(int *pda, int pdaMin, int pdaMax);
  * @brief Empty the debug info log
  * 
  */
-void resetDebugInfo();
+void resetDebugInfo(void);
 
 /**
  * @brief Free the debug info from memory
  * 
  */
-void freeDebugInfo();
+void freeDebugInfo(void);
 
 /**
  * @brief Get the debug info of the last autofocus run;

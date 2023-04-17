@@ -315,6 +315,7 @@ ssize_t i2c_write(const I2CDevice *device, unsigned int iaddr, const void *buf, 
 */
 void i2c_iaddr_convert(unsigned int iaddr, unsigned int len, unsigned char *addr)
 {
+    int i,j;
     union
     {
         unsigned int iaddr;
@@ -325,8 +326,8 @@ void i2c_iaddr_convert(unsigned int iaddr, unsigned int len, unsigned char *addr
     convert.iaddr = htonl(iaddr);
 
     /* Copy address to addr buffer */
-    int i = len - 1;
-    int j = INT_ADDR_MAX_BYTES - 1;
+    i = len - 1;
+    j = INT_ADDR_MAX_BYTES - 1;
 
     while (i >= 0 && j >= 0)
     {

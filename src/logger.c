@@ -34,9 +34,10 @@ Log *createNewEntry(char *message, size_t msgLen)
 
 void insert(List *list, char *message)
 {
+    size_t msgLen = strlen(message);
     if (list == NULL) return;
 
-    size_t msgLen = strlen(message);
+
 
     if (list->head == NULL)
     {
@@ -79,10 +80,11 @@ void insert(List *list, char *message)
 
 void freeList(List *list)
 {
-    if (list == NULL) return;
-
     Log *curr = list->head;
     Log *tmp = NULL;
+    if (list == NULL) return;
+
+    
 
     while (curr != NULL)
     {
@@ -97,9 +99,10 @@ void freeList(List *list)
 
 void invalidList(List *list)
 {
+    Log *curr = list->head;
     if (list == NULL) return;
 
-    Log *curr = list->head;
+
 
     while (curr != NULL)
     {
@@ -112,19 +115,21 @@ void invalidList(List *list)
 
 char *getListStr(List *list)
 {
+    char *fullLog = (char*)malloc(sizeof(char) * (list->len + 1));
     if (list == NULL) return NULL;
 
-    char *fullLog = (char*)malloc(sizeof(char) * (list->len + 1));
+
     
     if (fullLog == NULL)
     {
         printf("Error: Unable to allocate memory\n");
     }
     else
-    {    
+    {   
+        Log *curr = list->head;
         fullLog[0] = '\0';
 
-        Log *curr = list->head;
+
 
         while (curr != NULL && curr->isValid)
         {

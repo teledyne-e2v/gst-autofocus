@@ -7,6 +7,11 @@
 #include <math.h>
 
 static AutofocusConf currentConf;
+void logAutofocusInfo(int nbIter, long int sharpness);
+void goToPDA(I2CDevice *device, int bus, int pda);
+
+
+
 
 List debugInfo = { NULL, 0 };
 
@@ -118,7 +123,7 @@ long int unbiasedSharpnessThread(guint8 *imgMat, int width, ROI roi)
 {
     long int finalResult = 0;
     long int finalAverage = 0;
-
+	long int n;
     pthread_t threads[NB_THREADS];
     SharpnessParameters params[NB_THREADS];
 
@@ -156,7 +161,7 @@ long int unbiasedSharpnessThread(guint8 *imgMat, int width, ROI roi)
         finalAverage += params[i].average;
     }
 
-    long int n = roi.width * roi.height;
+    n = roi.width * roi.height;
     finalAverage = finalAverage / n;
 
     return finalResult / finalAverage;
@@ -164,15 +169,18 @@ long int unbiasedSharpnessThread(guint8 *imgMat, int width, ROI roi)
 
 long int getSharpness(GstPad *pad, GstBuffer *buf, ROI roi)
 {
+ long int sharp;
     GstMapInfo map;
-
+	GstCaps *caps;
+gboolean res;
+    gint width, height;
+GstStructure *s;
     gst_buffer_map(buf, &map, GST_MAP_READ);
 
-    GstCaps *caps = gst_pad_get_current_caps(pad);
-    GstStructure *s = gst_caps_get_structure(caps, 0);
+    caps = gst_pad_get_current_caps(pad);
+    s = gst_caps_get_structure(caps, 0);
 
-    gboolean res;
-    gint width, height;
+    
 
     // we need to get the final caps on the buffer to get the size
     res = gst_structure_get_int(s, "width", &width);
@@ -184,7 +192,7 @@ long int getSharpness(GstPad *pad, GstBuffer *buf, ROI roi)
         exit(-1);
     }
 
-    long int sharp = unbiasedSharpnessThread(map.data, width, roi);
+     sharp = unbiasedSharpnessThread(map.data, width, roi);
 
     /*for (int y = roi.y; y < roi.y + roi.height - 1; y++)
     {
@@ -343,6 +351,7 @@ void resetAutofocus(AutofocusStrategy strat, AutofocusConf *conf, I2CDevice *dev
     }
     else
     {
+        char tmp[128];
         currentConf.debugLvl = conf->debugLvl;
         currentConf.bestPdaValue = 0;
         currentConf.pdaValue = conf->pdaMin;
@@ -357,7 +366,7 @@ void resetAutofocus(AutofocusStrategy strat, AutofocusConf *conf, I2CDevice *dev
         currentConf.phase = conf->phase;
         currentConf.currentStrategy = strat;
         
-        char tmp[128];
+        
         
         if (currentConf.debugLvl >= MINIMAL)
         {
@@ -378,12 +387,12 @@ void resetAutofocus(AutofocusStrategy strat, AutofocusConf *conf, I2CDevice *dev
     goToPDA(device, bus, currentConf.pdaMin);
 }
 
-void resetDebugInfo()
+void resetDebugInfo(void)
 {
     invalidList(&debugInfo);
 }
 
-void freeDebugInfo()
+void freeDebugInfo(void)
 {
     freeList(&debugInfo);
 }

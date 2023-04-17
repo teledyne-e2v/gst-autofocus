@@ -5,7 +5,8 @@
 #include <string.h>
 
 int i2cInit(I2CDevice *device, I2CDevice *devicepda, int *bus)
-{
+{	
+	int err;
 	char bus_name[32] = "/dev/i2c-6"; //<--bus 6
 	if ((*bus = i2c_open(bus_name)) == -1)
 	{
@@ -25,7 +26,7 @@ int i2cInit(I2CDevice *device, I2CDevice *devicepda, int *bus)
 	/* Init i2c devicepda */
 	initDevice(devicepda, *bus, 0x0C, 8, 1);
 
-	int err = enable_VdacPda(*devicepda, *bus);
+	err = enable_VdacPda(*devicepda, *bus);
 	return err;
 	
 }
@@ -89,6 +90,7 @@ int disable_VdacPda(I2CDevice device, int bus)
 int write_VdacPda(I2CDevice device, int bus, int PdaRegValue)
 {
 	int registre;
+	unsigned char MSB, LSB;
 	unsigned char buffer[1];
 	ssize_t size = sizeof(buffer);
 	memset(buffer, 0, size);
@@ -104,7 +106,7 @@ int write_VdacPda(I2CDevice device, int bus, int PdaRegValue)
 		PdaRegValue = -91;
 	}
 
-	unsigned char MSB, LSB;
+
 	if (PdaRegValue >= 0)
 	{
 		MSB = 0x80 + ((PdaRegValue >> 8) & 0xFF);
