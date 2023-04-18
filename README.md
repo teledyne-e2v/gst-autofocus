@@ -32,6 +32,17 @@ The following libraries are required for this plugin.
 - libgstreamer1.0-dev
 - libgstreamer-plugins-base1.0-dev
 
+### For compilation 
+Note : gcc autotools and make are installed by default in most of linux distributions (should be installe on yocto images).
+
+- gcc
+- (autotools + make) or (meson + ninja) 
+
+### For usage 
+
+- gstreamer-1.0
+
+
 Install them with: 
 
 ```
