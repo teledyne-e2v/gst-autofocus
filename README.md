@@ -32,8 +32,15 @@ The following libraries are required for this plugin.
 - libgstreamer1.0-dev
 - libgstreamer-plugins-base1.0-dev
 
+#### Debian based system (Jetson): 
+
+```
+sudo apt install v4l-utils libv4l-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+```
+##### Note : if you are using a Yocto distribution, look at the github to find a .bbappend file which provides all packages to your distribution 
+
 ### For compilation 
-Note : gcc autotools and make are installed by default in most of linux distributions (should be installe on yocto images).
+Note : gcc autotools and make are installed by default in most of linux distributions (not on all yocto images).
 
 - gcc
 - (autotools + make) or (meson + ninja) 
@@ -43,12 +50,6 @@ Note : gcc autotools and make are installed by default in most of linux distribu
 - gstreamer-1.0
 
 
-Install them with: 
-
-```
-sudo apt install v4l-utils libv4l-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-```
-##### Note : if you are using a Yocto distribution, look at the github to find a .bbappend file which provides all packages to your distribution 
 
 # Compilation
 
