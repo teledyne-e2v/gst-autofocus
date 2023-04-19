@@ -59,7 +59,7 @@ Otherwise the compilation will fail.
 
 ### Using Meson 
 
-In the **gst-multifocus** folder do:
+In the **gst-autofocus** folder do:
 
 ```
 meson build
@@ -73,7 +73,7 @@ sudo ninja -C build install
 
 ### Using Autotools (deprecated)
 
-In the **gst-multifocus** folder do:
+In the **gst-autofocus** folder do:
 ```
 bash autogen.sh
 ```
@@ -91,7 +91,7 @@ Otherwise the compilation will fail.
 
 ### Using Meson 
 
-In the **gst-multifocus** folder do:
+In the **gst-autofocus** folder do:
 
 ```
 meson build
@@ -102,7 +102,7 @@ ninja -C build install
 
 ### Using Autotools (deprecated)
 
-In the **gst-multifocus** folder do:
+In the **gst-autofocus** folder do:
 ```
 bash autogen.sh
 ```
@@ -115,10 +115,10 @@ make install
 To test if the plugin has been correctly install, do:
 ```
 export GST_PLUGIN_PATH=/usr/local/lib/gstreamer-1.0/
-gst-inspect-1.0 multifocus
+gst-inspect-1.0 autofocus
 ```
 
-If the plugin failed to install the following message will be displayed: "No such element or plugin 'multifocus'"
+If the plugin failed to install the following message will be displayed: "No such element or plugin 'autofocus'"
 
 # Uninstall
 
