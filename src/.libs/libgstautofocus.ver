@@ -1,5 +1,0 @@
-{ global:
-gst_autofocus_get_type;
-gst_plugin_autofocus_get_desc;
-gst_plugin_autofocus_register;
-local: *; };
