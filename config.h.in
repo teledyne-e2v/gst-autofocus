@@ -1,0 +1,5 @@
+#define VERSION "@package_version@"
+#define PACKAGE_NAME "@package_name@"
+#define PACKAGE "@package@"
+#define PACKAGE_STRING "@package_string@"
+#define TAR_NAME "@tar_name@"
