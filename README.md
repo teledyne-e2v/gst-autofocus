@@ -41,31 +41,93 @@ The following libraries are required for this plugin.
 - libgstreamer-plugins-base1.0-dev
 - libgsl-dev
 
-Install them with: 
+#### Debian based system (Jetson): 
 
 ```
 sudo apt install v4l-utils libv4l-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgsl-dev
 ```
+##### Note : if you are using a Yocto distribution, look at the github to find a .bbappend file which provides all packages to your distribution 
+
+### For compilation 
+Note : gcc autotools and make are installed by default in most of linux distributions (not on all yocto images).
+
+- gcc
+- (autotools + make) or (meson + ninja) 
+
+### For usage 
+
+- gstreamer-1.0
+
+
 
 # Compilation
+
+## Ubuntu (Jetson)
 First you must make sure that your device's clock is correctly setup.
 Otherwise the compilation will fail.
 
-In the AutofocusPlugin folder do:
+### Using Meson 
 
-	bash autogen.sh
-	make
+In the **gst-autofocus** folder do:
 
-# Install
+```
+meson build
+```
+```
+ninja -C build
+```
+```
+sudo ninja -C build install
+```
 
-	sudo make install
+### Using Autotools (deprecated)
+
+In the **gst-autofocus** folder do:
+```
+bash autogen.sh
+```
+```
+make
+```
+
+```
+sudo make install
+```
+
+## Yocto (IMX)
+First you must make sure that your device's clock is correctly setup.
+Otherwise the compilation will fail.
+
+### Using Meson 
+
+In the **gst-autofocus** folder do:
+
+```
+meson build
+```
+```
+ninja -C build install
+```
+
+### Using Autotools (deprecated)
+
+In the **gst-autofocus** folder do:
+```
+bash autogen.sh
+```
+```
+make install
+```
+
+# Installation test
 
 To test if the plugin has been correctly install, do:
+```
+export GST_PLUGIN_PATH=/usr/local/lib/gstreamer-1.0/
+gst-inspect-1.0 autofocus
+```
 
-	export GST_PLUGIN_PATH=/usr/local/lib/gstreamer-1.0/
-	gst-inspect-1.0 autofocus
-
-If the plugin failed to install the following message will be displayed: ```No such element or plugin 'autofocus'```
+If the plugin failed to install the following message will be displayed: "No such element or plugin 'autofocus'"
 
 # Uninstall
 

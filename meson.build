@@ -1,5 +1,5 @@
 project('gst-autofocus', 'c',
-  version : '2.1.0',
+  version : '2.3.0',
   meson_version : '>= 0.43',
   default_options : [ 'warning_level=1',
                       'buildtype=debugoptimized' ])
@@ -231,5 +231,6 @@ conf_data.set('tar_name', meson.project_name())
 configure_file(input : 'config.h.in',
                output : 'config.h',
                configuration : conf_data)
+
 
 

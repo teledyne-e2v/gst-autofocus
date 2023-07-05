@@ -131,6 +131,7 @@ static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuff
 
 static void gst_autofocus_finalize(void);//GObject *object);
 
+
 #define TYPE_AUTOFOCUS_STATUS (autofocus_status_get_type())
 static GType
 autofocus_status_get_type(void)
@@ -144,8 +145,7 @@ autofocus_status_get_type(void)
                 {PENDING, "Pending", "pending"},
                 {IN_PROGRESS, "In progress", "in_progress"},
                 {COMPLETED, "Completed", "completed"},
-                {0, NULL, NULL}
-            };
+                {0, NULL, NULL}};
 
         autofocus_status = g_enum_register_static("AutofocusStatus", status);
     }
@@ -166,8 +166,7 @@ debug_level_get_type(void)
                 {NONE, "None", "none"},
                 {MINIMAL, "Minimal", "minimal"},
                 {FULL, "Full", "full"},
-                {0, NULL, NULL}
-            };
+                {0, NULL, NULL}};
 
         debug_level = g_enum_register_static("DebugLevel", status);
     }
@@ -219,12 +218,12 @@ void *autofocusHandler(void *autofocus)
         while (listen)
         {
             char input;
-	    int res;
+            int res;
             res = scanf(" %c", &input);
-	    if(res!=1)
-	    {
-		g_print("Scanf failed, check input ");
-	    }
+            if (res != 1)
+            {
+                g_print("Scanf failed, check input ");
+            }
             if (input == 'a' && focus->autofocusStatus == COMPLETED)
             {
                 focus->autofocusStatus = PENDING;
@@ -234,10 +233,10 @@ void *autofocusHandler(void *autofocus)
                 int newStrat;
                 g_print("Choose an other autofocus strategy: ");
                 res = scanf(" %d", &newStrat);
-		if(res!=1)
-	    	{
-			g_print("Scanf failed, check input ");
-	    	}
+                if (res != 1)
+                {
+                    g_print("Scanf failed, check input ");
+                }
                 if (newStrat < 0 || newStrat > 1)
                 {
                     g_print("\tError: unknown strategy\n");
@@ -282,7 +281,7 @@ static void gst_autofocus_class_init(GstautofocusClass *klass)
 
     gobject_class->set_property = gst_autofocus_set_property;
     gobject_class->get_property = gst_autofocus_get_property;
-    gobject_class->finalize     = gst_autofocus_finalize;
+    gobject_class->finalize = gst_autofocus_finalize;
 
     g_object_class_install_property(gobject_class, PROP_STRATEGY,
                                     g_param_spec_int("strategy", "Strategy",
@@ -381,7 +380,7 @@ static void gst_autofocus_class_init(GstautofocusClass *klass)
 
     g_object_class_install_property(gobject_class, PROP_DEBUG_LEVEL,
                                     g_param_spec_enum("debug_level", "Debug level", "The debugging level:\n\tnone(0): nothing is logged\n\tminimal(1): Only log the step, pda range and best focus found\n\tfull(2): Add on top of the minimal level information about each step of the algorithm",
-                                                        TYPE_DEBUG_LEVEL, MINIMAL, G_PARAM_READWRITE));
+                                                      TYPE_DEBUG_LEVEL, MINIMAL, G_PARAM_READWRITE));
 
     g_object_class_install_property(gobject_class, PROP_PDA_HOLD_CMD,
                                     g_param_spec_int("pda_hold_cmd", "pda_hold_cmd", "The number of frame between each command sent",
@@ -438,7 +437,7 @@ static void gst_autofocus_init(Gstautofocus *autofocus)
     autofocus->sharpness = 0;
 
     autofocus->debugInfo = NULL;
-    autofocus->debugLvl  = MINIMAL;
+    autofocus->debugLvl = MINIMAL;
 
     autofocus->benchmark_expected_sharpness=1;
     autofocus->benchmark_min_expected_sharpness=1;
@@ -459,18 +458,18 @@ static void gst_autofocus_init(Gstautofocus *autofocus)
     conf.phase = PHASE_1;
     conf.debugLvl = MINIMAL;
 
-    i2c_err=i2cInit(&device, &devicepda, &bus);
-    if(!i2c_err)
+    i2c_err = i2cInit(&device, &devicepda, &bus);
+    if (!i2c_err)
     {
-    pthread_t thread;
+        pthread_t thread;
 
-    int rc;
-    if ((rc = pthread_create(&thread, NULL, autofocusHandler, (void *)autofocus)))
-    {
-        g_print("Error: unable to create thread, %d\n", rc);
-        exit(-1);
+        int rc;
+        if ((rc = pthread_create(&thread, NULL, autofocusHandler, (void *)autofocus)))
+        {
+            g_print("Error: unable to create thread, %d\n", rc);
+            exit(-1);
+        }
     }
-}
 }
 
 static void gst_autofocus_set_property(GObject *object, guint prop_id,
@@ -683,7 +682,7 @@ static void gst_autofocus_get_property(GObject *object, guint prop_id,
  */
 static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuffer *buf)
 {
-	
+
     Gstautofocus *autofocus = GST_AUTOFOCUS(parent);
     GstCaps *caps = gst_pad_get_current_caps(pad);
     GstStructure *s = gst_caps_get_structure(caps, 0);
@@ -716,65 +715,87 @@ static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuff
 
 
     if (autofocus->calibrating == TRUE && autofocus->autofocusStatus == COMPLETED)
-    {
-        static long int prevSharpness = 0;
-        static int offset = 0;
-        
-        if (frameCount == 0)
-        {
-            write_VdacPda(devicepda, bus, 0); // return to PDA 0
-        }
-        else if (frameCount == 5) // Wait for 5 frame, then send a command
-        {
-            write_VdacPda(devicepda, bus, 500); // go to PDA 500
-        }
-        else if (frameCount >= 5)
-        {
-            double relativeDiff = ((prevSharpness - autofocus->sharpness) / (double)autofocus->sharpness) * 100.0f;
-            
-            offset++;
-            
-            if (relativeDiff >= 25.0f || relativeDiff <= -25.0f)
-            {
-                conf.offset = offset - autofocus->pdaHoldCmd;
-                if (conf.offset < 0)
-                    conf.offset = 0;
-                
-                autofocus->calibrating = FALSE;
 
-                g_print("Calibration complete: the new offset is %d\n", conf.offset);
+    {
+        gint width = 0, height = 0;
+
+        static struct timeval start, end;
+
+        static long sharpness = -1;
+        static int nbFrame = 0;
+        static int lostFocusCount = 0;
+        static short int buffering = 8;
+        static int waitRemaining = 0;
+        gst_structure_get_int(s, "width", &width);
+        gst_structure_get_int(s, "height", &height);
+        if (roi.height > height)
+        {
+            roi.height = height - roi.y;
+        }
+
+        if (roi.width > width)
+        {
+            roi.width = width - roi.x;
+        }
+
+        autofocus->sharpness = getSharpness(pad, buf, roi);
+
+        // g_print("%ld\n", autofocus->sharpness);
+
+        if (autofocus->calibrating == TRUE && autofocus->autofocusStatus == COMPLETED)
+        {
+            static long int prevSharpness = 0;
+            static int offset = 0;
+
+            if (frameCount == 0)
+            {
+                write_VdacPda(devicepda, bus, 0); // return to PDA 0
+            }
+            else if (frameCount == 5) // Wait for 5 frame, then send a command
+            {
+                write_VdacPda(devicepda, bus, 500); // go to PDA 500
+            }
+            else if (frameCount >= 5)
+            {
+                double relativeDiff = ((prevSharpness - autofocus->sharpness) / (double)autofocus->sharpness) * 100.0f;
+
+                offset++;
+
+                if (relativeDiff >= 25.0f || relativeDiff <= -25.0f)
+                {
+                    conf.offset = offset - autofocus->pdaHoldCmd;
+                    if (conf.offset < 0)
+                        conf.offset = 0;
+
+                    autofocus->calibrating = FALSE;
+
+                    g_print("Calibration complete: the new offset is %d\n", conf.offset);
+                    prevSharpness = 0;
+                    offset = 0;
+                }
+            }
+            if (frameCount >= 60)
+            {
+                g_print("The calibration is too long, aborting\n");
+                autofocus->calibrating = FALSE;
                 prevSharpness = 0;
                 offset = 0;
             }
+
+            prevSharpness = autofocus->sharpness;
+
+            frameCount++;
         }
-        if (frameCount >= 60)
+        else if (autofocus->autofocusStatus == PENDING) // Get the time at the start of autofocus
         {
-            g_print("The calibration is too long, aborting\n");
-            autofocus->calibrating = FALSE;
-            prevSharpness = 0;
-            offset = 0;
-        }
-        
-        prevSharpness = autofocus->sharpness;
+            resetDebugInfo();
+            g_print("Starting the autofocus\n\n");
 
-        frameCount++;
-    }
-    else if (autofocus->autofocusStatus == PENDING) // Get the time at the start of autofocus
-    {
-        resetDebugInfo();
-        g_print("Starting the autofocus\n\n");
-        
-        resetAutofocus(autofocus->strategy, &conf, &devicepda, bus);
+            resetAutofocus(autofocus->strategy, &conf, &devicepda, bus);
 
-        waitRemaining = autofocus->pdaHoldCmd;
+            waitRemaining = autofocus->pdaHoldCmd;
 
-        autofocus->autofocusStatus = (waitRemaining == 0) ? IN_PROGRESS : WAITING;
-        
-        gettimeofday(&start, NULL);
-    }
-    else if (autofocus->autofocusStatus == WAITING)
-    {
-        waitRemaining--;
+            autofocus->autofocusStatus = (waitRemaining == 0) ? IN_PROGRESS : WAITING;
 
         if ((waitRemaining) <= 0)
             autofocus->autofocusStatus = IN_PROGRESS;
@@ -809,14 +830,14 @@ static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuff
 		}
 	}
         else
+
         {
-            g_print("Error: Unknown autofocus strategy!\n");
+            waitRemaining--;
 
-            sharpness = -1;
-            autofocus->autofocusStatus = COMPLETED;
+            if ((waitRemaining) <= 0)
+                autofocus->autofocusStatus = IN_PROGRESS;
         }
-
-        if (sharpness != -1)
+        else if (autofocus->autofocusStatus == IN_PROGRESS)
         {
 		double elapsed;
 		char *tmp;
@@ -833,60 +854,74 @@ static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuff
             
             tmp = getDebugInfo(&logLen);
 
-            if (logLen != 0)
-            {
-                autofocus->debugInfo = (char*)realloc(autofocus->debugInfo, sizeof(char) * (logLen + 1));
-                autofocus->debugInfo = strncpy(autofocus->debugInfo, tmp, logLen);
-                autofocus->debugInfo[logLen] = '\0';
-                free(tmp);
-            }
 
-            autofocus->autofocusStatus = COMPLETED;
-            
-            buffering = conf.offset * 2; // Prevent the continuous autofocus from starting before the first sharp frame arrive
-        }
-        else if (autofocus->pdaHoldCmd > 0)
-        {
-            waitRemaining = autofocus->pdaHoldCmd;
-            autofocus->autofocusStatus = WAITING;
-        }
-    }
-    else if (sharpness != -1 && buffering == 0) // When the autofocus has finish check if the frame is still sharp after a little while
-    {
-        if (nbFrame >= autofocus->continuousUpdateInterval)
-        {
-            double relativeDiff = ((sharpness - autofocus->sharpness) / (double)autofocus->sharpness) * 100.0f;
+            if (sharpness != -1)
+            {
+                double elapsed;
+                char *tmp;
+                size_t logLen = 0;
+
+                gettimeofday(&end, NULL); // Get the time when the autofocus ended
 
             if (relativeDiff > autofocus->continuousThreshold || relativeDiff < -autofocus->continuousThreshold)
             {
                 //g_print("Warning: focus has been lost (may be); %ld\n", autofocus->sharpness);
 
-                autofocus->autofocusLost = TRUE;
-                lostFocusCount++;
-            }
-            else
-            {
-                autofocus->autofocusLost = FALSE;
-                lostFocusCount = 0;
-            }
 
-            if (lostFocusCount > autofocus->continuousTimeout && autofocus->continuous == TRUE)
-            {
-                resetAutofocus(autofocus->strategy, &conf, &devicepda, bus);
-                autofocus->autofocusStatus = PENDING;
-                lostFocusCount = 0;
-                g_print("Trying to refocus the frame...\n");
-            }
+                if (logLen != 0)
+                {
+                    autofocus->debugInfo = (char *)realloc(autofocus->debugInfo, sizeof(char) * (logLen + 1));
+                    autofocus->debugInfo = strncpy(autofocus->debugInfo, tmp, logLen);
+                    autofocus->debugInfo[logLen] = '\0';
+                    free(tmp);
+                }
 
-            nbFrame = 0;
+                autofocus->autofocusStatus = COMPLETED;
+
+                buffering = conf.offset * 2; // Prevent the continuous autofocus from starting before the first sharp frame arrive
+            }
+            else if (autofocus->pdaHoldCmd > 0)
+            {
+                waitRemaining = autofocus->pdaHoldCmd;
+                autofocus->autofocusStatus = WAITING;
+            }
         }
+        else if (sharpness != -1 && buffering == 0) // When the autofocus has finish check if the frame is still sharp after a little while
+        {
+            if (nbFrame >= autofocus->continuousUpdateInterval)
+            {
+                double relativeDiff = ((sharpness - autofocus->sharpness) / (double)autofocus->sharpness) * 100.0f;
 
-        nbFrame++;
-    }
-    else
-    {
-        buffering--;
-    }
+                if (relativeDiff > autofocus->continuousThreshold || relativeDiff < -autofocus->continuousThreshold)
+                {
+                    g_print("Warning: focus has been lost (may be); %ld\n", autofocus->sharpness);
+
+                    autofocus->autofocusLost = TRUE;
+                    lostFocusCount++;
+                }
+                else
+                {
+                    autofocus->autofocusLost = FALSE;
+                    lostFocusCount = 0;
+                }
+
+                if (lostFocusCount > autofocus->continuousTimeout && autofocus->continuous == TRUE)
+                {
+                    resetAutofocus(autofocus->strategy, &conf, &devicepda, bus);
+                    autofocus->autofocusStatus = PENDING;
+                    lostFocusCount = 0;
+                    g_print("Trying to refocus the frame...\n");
+                }
+
+                nbFrame = 0;
+            }
+
+            nbFrame++;
+        }
+        else
+        {
+            buffering--;
+        }
     }
 
     if(autofocus->autofocusStatus == IN_PROGRESS || autofocus->continuous == TRUE || autofocus->sharpnessCalculation)
@@ -916,6 +951,8 @@ static gboolean autofocus_init(GstPlugin *autofocus)
 }
 
 static void gst_autofocus_finalize(void)//GObject *object)
+
+
 {
     disable_VdacPda(devicepda, bus);
     i2c_close(bus);
