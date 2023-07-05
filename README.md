@@ -1,7 +1,7 @@
 # gst-autofocus
 Autofocus gtreamer plugin for OPTIMOM module
 
-# Version 1.2
+# Version 1.3
 
 # About
 
@@ -24,6 +24,14 @@ Then the second phase is like the naive algorithm but it uses the pda range foun
 
 This technic, if the step for both phases is well tuned, can achieve similar results to the naive algorithm, but much quicker.
 
+## Weighted mean algorithm
+
+This algorithm take 5 sharpness at 5 different focus and do a weighted mean of their sharpness (in function of the DAC) and try to deduce the best value.
+
+## Gaussian fit
+
+This algorithm takes 14 sharpness at 14 different focus and try to fit a gaussian curve. With the fitted curve, it deduce the best focus.
+
 # Dependencies
 
 The following libraries are required for this plugin.
@@ -31,11 +39,12 @@ The following libraries are required for this plugin.
 - libv4l-dev
 - libgstreamer1.0-dev
 - libgstreamer-plugins-base1.0-dev
+- libgsl-dev
 
 #### Debian based system (Jetson): 
 
 ```
-sudo apt install v4l-utils libv4l-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+sudo apt install v4l-utils libv4l-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgsl-dev
 ```
 ##### Note : if you are using a Yocto distribution, look at the github to find a .bbappend file which provides all packages to your distribution 
 
@@ -154,11 +163,13 @@ Continuous autofocus:
 - strategy: 
     - Type: int
     - Minimal value: 0
-    - Maximal value: 1
+    - Maximal value: 3
     - Default value: 1
     - Description: Set which algorithm is used to do the autofocus
-        - 0 is the naive algorimth
-        - 1 is the two pass algorimth
+        - 0 is the naive algorithm
+        - 1 is the two pass algorithm
+        - 2 is the weighted mean algorithm
+        - 3 is the gaussian fit algorithm
 
 - x: 
     - Type: int
@@ -227,7 +238,7 @@ Continuous autofocus:
     - Type: int
     - Minimal value: 0
     - Maximal value: 100
-    - Default value: 3
+    - Default value: 4
     - Description: The frame offset between a pda command and the arrival of the corresponding frame in the plugin
 
 - continuous:
@@ -257,11 +268,17 @@ Continuous autofocus:
     - Description: How many times should the calculated sharpness be under the threshold before relaunching the autofocus algorithm
     - Note: The parameter has no effect if the parameter continuous is set to false
 
+
 - listen:
     - Type: boolean
     - Default value: true
     - Description: Listen for user input in the terminal. 
                    This should be set to false for gstreamer application which handle user input on their own.
+
+- sharpness_calculation:
+    - Type: boolean
+    - Default value: false
+    - Description: Enable / disable the sharpness calculation when the autofocus is inactive.
 
 - debug_level:
     - Type: enum

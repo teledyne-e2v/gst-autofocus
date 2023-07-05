@@ -2,30 +2,11 @@
  * GStreamer
  * Copyright (C) 2005 Thomas Vander Stichele <thomas@apestaart.org>
  * Copyright (C) 2005 Ronald S. Bultje <rbultje@ronald.bitfreak.net>
- * Copyright (C) 2022 Nicolas <<user@hostname.org>>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Alternatively, the contents of this file may be used under the
- * GNU Lesser General Public License Version 2.1 (the "LGPL"), in
- * which case the following provisions apply instead of the ones
- * mentioned above:
+ * 
+ * Teledyne e2V
+ * Copyright (C) 2022 Nicolas
+ * Copyright (C) 2023 Loic Chevallier <Teledyne e2V>
+ * 
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -105,7 +86,11 @@ enum
     PROP_CALIBRATING,
     PROP_DEBUG_LOG,
     PROP_DEBUG_LEVEL,
-    PROP_PDA_HOLD_CMD
+    PROP_PDA_HOLD_CMD,
+    PROP_BENCHMARK_EXPECTED_SHARPNESS,
+    PROP_BENCHMARK_ITERATIONS,
+    PROP_BENCHMARK_MIN_EXPECTED_SHARPNESS,
+    PROP_SHARPNESS_CALCULATION
 };
 void printHelp(void);
 void *autofocusHandler(void *autofocus);
@@ -144,7 +129,8 @@ static void gst_autofocus_get_property(GObject *object, guint prop_id,
 
 static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuffer *buf);
 
-static void gst_autofocus_finalize(void); // GObject *object);
+static void gst_autofocus_finalize(void);//GObject *object);
+
 
 #define TYPE_AUTOFOCUS_STATUS (autofocus_status_get_type())
 static GType
@@ -300,11 +286,20 @@ static void gst_autofocus_class_init(GstautofocusClass *klass)
     g_object_class_install_property(gobject_class, PROP_STRATEGY,
                                     g_param_spec_int("strategy", "Strategy",
                                                      "Set which algorithm is used to do the autofocus\n\t- 0 is the naive algorimth\n\t- 1 is the two pass algorimth",
-                                                     0, 1, 1, G_PARAM_READWRITE));
+                                                     0, 4, 1, G_PARAM_READWRITE));
 
     g_object_class_install_property(gobject_class, PROP_X,
                                     g_param_spec_int("x", "X", "The top left X coordinates of the ROI",
                                                      0, 1920, 0, G_PARAM_READWRITE));
+    g_object_class_install_property(gobject_class, PROP_BENCHMARK_EXPECTED_SHARPNESS,
+                                    g_param_spec_int("benchmark_expected_sharpness", "Benchmark_expected_sharpness", "The maximum sharpness possible in the configuration",
+                                                     1, 1000000, 1, G_PARAM_READWRITE));
+    g_object_class_install_property(gobject_class, PROP_BENCHMARK_MIN_EXPECTED_SHARPNESS,
+                                    g_param_spec_int("benchmark_min_expected_sharpness", "Benchmark_min_expected_sharpness", "The minimum sharpness possible in the configuration",
+                                                     1, 1000000, 1, G_PARAM_READWRITE));
+    g_object_class_install_property(gobject_class, PROP_BENCHMARK_ITERATIONS,
+                                    g_param_spec_int("benchmark_iterations", "Benchmark_iterations", "The number of iterations to do the benchmark",
+                                                     1, 50000, 1, G_PARAM_READWRITE));
 
     g_object_class_install_property(gobject_class, PROP_Y,
                                     g_param_spec_int("y", "Y", "The top left Y coordinates of the ROI",
@@ -344,7 +339,7 @@ static void gst_autofocus_class_init(GstautofocusClass *klass)
 
     g_object_class_install_property(gobject_class, PROP_OFFSET,
                                     g_param_spec_int("offset", "Offset", "The frame offset between a pda command and the arrival of the corresponding frame in the plugin",
-                                                     0, 100, 3, G_PARAM_READWRITE));
+                                                     0, 100, 4, G_PARAM_READWRITE));
 
     g_object_class_install_property(gobject_class, PROP_CONTINUOUS_UPDATE_INTERVAL,
                                     g_param_spec_int("continuous_update_interval", "update", "How often should the sharness be calculated",
@@ -390,6 +385,11 @@ static void gst_autofocus_class_init(GstautofocusClass *klass)
     g_object_class_install_property(gobject_class, PROP_PDA_HOLD_CMD,
                                     g_param_spec_int("pda_hold_cmd", "pda_hold_cmd", "The number of frame between each command sent",
                                                      0, 1024, 0, G_PARAM_READWRITE));
+
+    g_object_class_install_property(gobject_class, PROP_SHARPNESS_CALCULATION,
+                                    g_param_spec_boolean("sharpness_calculation", "Sharpness_calculation",
+                                                         "Will calculate the sharpness each frames",
+                                                         FALSE, G_PARAM_READWRITE));
 
     gst_element_class_set_details_simple(gstelement_class,
                                          "autofocus",
@@ -439,8 +439,11 @@ static void gst_autofocus_init(Gstautofocus *autofocus)
     autofocus->debugInfo = NULL;
     autofocus->debugLvl = MINIMAL;
 
+    autofocus->benchmark_expected_sharpness=1;
+    autofocus->benchmark_min_expected_sharpness=1;
+    autofocus->benchmark_iterations=50;
     autofocus->pdaHoldCmd = 0;
-
+    autofocus->sharpnessCalculation = false;
     roi.x = 0;
     roi.y = 0;
     roi.width = 1920;
@@ -451,7 +454,7 @@ static void gst_autofocus_init(Gstautofocus *autofocus)
     conf.pdaSmallStep = 8;
     conf.pdaBigStep = 63;
     conf.maxDec = 3;
-    conf.offset = 3;
+    conf.offset = 4;
     conf.phase = PHASE_1;
     conf.debugLvl = MINIMAL;
 
@@ -527,6 +530,9 @@ static void gst_autofocus_set_property(GObject *object, guint prop_id,
     case PROP_CONTINUOUS:
         autofocus->continuous = g_value_get_boolean(value);
         break;
+    case PROP_SHARPNESS_CALCULATION:
+        autofocus->sharpnessCalculation = g_value_get_boolean(value);
+        break;
     case PROP_CONTINUOUS_UPDATE_INTERVAL:
         autofocus->continuousUpdateInterval = g_value_get_int(value);
         break;
@@ -543,6 +549,15 @@ static void gst_autofocus_set_property(GObject *object, guint prop_id,
     case PROP_SHARPNESS:
         autofocus->sharpness = g_value_get_long(value);
         break;
+    case PROP_BENCHMARK_EXPECTED_SHARPNESS:
+    	autofocus->benchmark_expected_sharpness=g_value_get_int(value);
+    	break;
+    case PROP_BENCHMARK_MIN_EXPECTED_SHARPNESS:
+    	autofocus->benchmark_min_expected_sharpness=g_value_get_int(value);
+    	break;
+    case PROP_BENCHMARK_ITERATIONS:
+	autofocus->benchmark_iterations=g_value_get_int(value);
+    	break;
     case PROP_CALIBRATING:
     {
         autofocus->calibrating = g_value_get_boolean(value);
@@ -614,6 +629,9 @@ static void gst_autofocus_get_property(GObject *object, guint prop_id,
     case PROP_CONTINUOUS:
         g_value_set_boolean(value, autofocus->continuous);
         break;
+    case PROP_SHARPNESS_CALCULATION:
+        g_value_set_boolean(value, autofocus->sharpnessCalculation);
+        break;
     case PROP_CONTINUOUS_UPDATE_INTERVAL:
         g_value_set_int(value, autofocus->continuousUpdateInterval);
         break;
@@ -644,6 +662,15 @@ static void gst_autofocus_get_property(GObject *object, guint prop_id,
     case PROP_PDA_HOLD_CMD:
         g_value_set_int(value, autofocus->pdaHoldCmd);
         break;
+    case PROP_BENCHMARK_EXPECTED_SHARPNESS:
+    	g_value_set_int(value, autofocus->benchmark_expected_sharpness);
+    	break;
+    case PROP_BENCHMARK_MIN_EXPECTED_SHARPNESS:
+    	g_value_set_int(value, autofocus->benchmark_min_expected_sharpness);
+    	break;
+    case PROP_BENCHMARK_ITERATIONS:
+    	g_value_set_int(value, autofocus->benchmark_iterations);
+    	break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
         break;
@@ -660,6 +687,35 @@ static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuff
     GstCaps *caps = gst_pad_get_current_caps(pad);
     GstStructure *s = gst_caps_get_structure(caps, 0);
     if (!i2c_err)
+    {
+        gint width = 0, height = 0;
+
+        static struct timeval start, end;
+
+        static long sharpness = -1;
+        static int nbFrame = 0;
+        static int lostFocusCount = 0;
+        static short int buffering = 8;
+        static int waitRemaining = 0;
+        gst_structure_get_int(s, "width", &width);
+        gst_structure_get_int(s, "height", &height);
+        if (roi.height > height)
+        {
+            roi.height = height - roi.y;
+        }
+
+        if (roi.width > width)
+        {
+            roi.width = width - roi.x;
+        }
+    
+	
+
+    // g_print("%ld\n", autofocus->sharpness);
+
+
+    if (autofocus->calibrating == TRUE && autofocus->autofocusStatus == COMPLETED)
+
     {
         gint width = 0, height = 0;
 
@@ -741,9 +797,40 @@ static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuff
 
             autofocus->autofocusStatus = (waitRemaining == 0) ? IN_PROGRESS : WAITING;
 
-            gettimeofday(&start, NULL);
-        }
-        else if (autofocus->autofocusStatus == WAITING)
+        if ((waitRemaining) <= 0)
+            autofocus->autofocusStatus = IN_PROGRESS;
+    }
+    else if (autofocus->autofocusStatus == IN_PROGRESS)
+    {
+
+        if (autofocus->strategy == NAIVE)
+            sharpness = naiveAutofocus(&devicepda, bus, autofocus->sharpness);
+        else if (autofocus->strategy == TWO_PHASES)
+            sharpness = twoPhaseAutofocus(&devicepda, bus, autofocus->sharpness);
+	else if (autofocus->strategy == WEIGHTED_MEAN)
+	{
+	    int important_PDAs[]= {-80,140,360,580,800};
+	    //int important_PDAs[] = {-80,-50,0,40,80,160,240,320,400,480,560,640,720};
+            sharpness = weightedMeanAutofocus(&devicepda, bus, autofocus->sharpness,important_PDAs,5,conf.offset);
+	}
+	else if(autofocus->strategy == GAUSSIAN_PREDICTION)
+	{
+  	    int important_PDAs[] = {-80,-50,0,40,80,160,240,320,400,480,560,640,720,798};
+            sharpness = gaussianPredictionAutofocus(&devicepda, bus, autofocus->sharpness,important_PDAs,14,conf.offset);
+	}
+	else if(autofocus->strategy == BENCHMARK)
+	{
+	    int important_PDAs[] = {-80,-50,0,40,80,160,240,320,400,480,560,640,720,798};
+	    float results[4]; // {accuracy,min,max,std}
+	    sharpness = autofocusBenchmark(&devicepda, bus, autofocus->sharpness,important_PDAs,14,conf.offset, autofocus->benchmark_iterations,autofocus->benchmark_expected_sharpness,autofocus->benchmark_min_expected_sharpness,results);
+	
+		if(sharpness>0)
+		{
+	    printf("accuracy; min; max; std; \n %f; %f; %f; %f\n", results[0],results[1],results[2],results[3]);
+		}
+	}
+        else
+
         {
             waitRemaining--;
 
@@ -752,17 +839,21 @@ static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuff
         }
         else if (autofocus->autofocusStatus == IN_PROGRESS)
         {
-            if (autofocus->strategy == NAIVE)
-                sharpness = naiveAutofocus(&devicepda, bus, autofocus->sharpness);
-            else if (autofocus->strategy == TWO_PHASES)
-                sharpness = twoPhaseAutofocus(&devicepda, bus, autofocus->sharpness);
-            else
-            {
-                g_print("Error: Unknown autofocus strategy!\n");
+		double elapsed;
+		char *tmp;
+            size_t logLen = 0;
+            gettimeofday(&end, NULL); // Get the time when the autofocus ended
 
-                sharpness = -1;
-                autofocus->autofocusStatus = COMPLETED;
-            }
+            elapsed =
+                ((end.tv_sec * 1000000 + end.tv_usec) -
+                 (start.tv_sec * 1000000 + start.tv_usec)) /
+                1000000.0f;
+
+            logAutofocusTime(elapsed);
+            
+            
+            tmp = getDebugInfo(&logLen);
+
 
             if (sharpness != -1)
             {
@@ -772,14 +863,10 @@ static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuff
 
                 gettimeofday(&end, NULL); // Get the time when the autofocus ended
 
-                elapsed =
-                    ((end.tv_sec * 1000000 + end.tv_usec) -
-                     (start.tv_sec * 1000000 + start.tv_usec)) /
-                    1000000.0f;
+            if (relativeDiff > autofocus->continuousThreshold || relativeDiff < -autofocus->continuousThreshold)
+            {
+                //g_print("Warning: focus has been lost (may be); %ld\n", autofocus->sharpness);
 
-                logAutofocusTime(elapsed);
-
-                                tmp = getDebugInfo(&logLen);
 
                 if (logLen != 0)
                 {
@@ -836,6 +923,12 @@ static GstFlowReturn gst_autofocus_chain(GstPad *pad, GstObject *parent, GstBuff
             buffering--;
         }
     }
+
+    if(autofocus->autofocusStatus == IN_PROGRESS || autofocus->continuous == TRUE || autofocus->sharpnessCalculation)
+{
+    autofocus->sharpness = getSharpness(pad, buf, roi);
+}
+	
     /* just push out the incoming buffer */
     return gst_pad_push(autofocus->srcpad, buf);
 }
@@ -857,7 +950,9 @@ static gboolean autofocus_init(GstPlugin *autofocus)
                                 GST_TYPE_AUTOFOCUS);
 }
 
-static void gst_autofocus_finalize(void) // GObject *object)
+static void gst_autofocus_finalize(void)//GObject *object)
+
+
 {
     disable_VdacPda(devicepda, bus);
     i2c_close(bus);

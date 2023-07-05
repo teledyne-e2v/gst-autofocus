@@ -57,8 +57,8 @@ void insert(List *list, char *message)
 
         if (curr != NULL)
         {
-            curr->message = (char*)realloc(curr->message, sizeof(char) * msgLen);
 
+            curr->message = (char*)realloc(curr->message, sizeof(char) * (msgLen+1));
             if (curr->message == NULL)
             {
                 printf("Error: Unable to reallocate memory for the new message\n");
