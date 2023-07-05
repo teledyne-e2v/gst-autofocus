@@ -14,3 +14,10 @@
 - Added the option to recalibrate the autofocus using the black pattern of the sensor
 - Added a new parameter to hold a pda value multiple frames
 - Added more debugging information
+
+=== Version 1.3 ===
+
+05-07-2023
+
+- New autofocus algorithms
+- Possibility to control the sharpness calculation

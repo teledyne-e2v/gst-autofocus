@@ -2,7 +2,11 @@
  * GStreamer
  * Copyright (C) 2005 Thomas Vander Stichele <thomas@apestaart.org>
  * Copyright (C) 2005 Ronald S. Bultje <rbultje@ronald.bitfreak.net>
- * Copyright (C) 2022 Nicolas <<user@hostname.org>>
+ * 
+ * Teledyne e2V
+ * Copyright (C) 2022 Nicolas
+ * Copyright (C) 2023 Loic Chevallier <Teledyne e2V>
+ * 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -359,7 +363,7 @@ static void gst_autofocus_class_init(GstautofocusClass *klass)
 
     g_object_class_install_property(gobject_class, PROP_OFFSET,
                                     g_param_spec_int("offset", "Offset", "The frame offset between a pda command and the arrival of the corresponding frame in the plugin",
-                                                     0, 100, 3, G_PARAM_READWRITE));
+                                                     0, 100, 4, G_PARAM_READWRITE));
 
     g_object_class_install_property(gobject_class, PROP_CONTINUOUS_UPDATE_INTERVAL,
                                     g_param_spec_int("continuous_update_interval", "update", "How often should the sharness be calculated",
@@ -407,7 +411,7 @@ static void gst_autofocus_class_init(GstautofocusClass *klass)
                                                      0, 1024, 0, G_PARAM_READWRITE));
 
     g_object_class_install_property(gobject_class, PROP_SHARPNESS_CALCULATION,
-                                    g_param_spec_boolean("sharpnessCalculation", "SharpnessCalcultation",
+                                    g_param_spec_boolean("sharpness_calculation", "Sharpness_calculation",
                                                          "Will calculate the sharpness each frames",
                                                          FALSE, G_PARAM_READWRITE));
 
@@ -474,7 +478,7 @@ static void gst_autofocus_init(Gstautofocus *autofocus)
     conf.pdaSmallStep = 8;
     conf.pdaBigStep = 63;
     conf.maxDec = 3;
-    conf.offset = 3;
+    conf.offset = 4;
     conf.phase = PHASE_1;
     conf.debugLvl = MINIMAL;
 
