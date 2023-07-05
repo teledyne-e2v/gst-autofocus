@@ -1,5 +1,5 @@
 project('gst-autofocus', 'c',
-  version : '2.3.0',
+  version : '1.3.0',
   meson_version : '>= 0.43',
   default_options : [ 'warning_level=1',
                       'buildtype=debugoptimized' ])
