@@ -21,3 +21,4 @@
 
 - New autofocus algorithms
 - Possibility to control the sharpness calculation
+- Compile only with Meson, autotools suppresed
