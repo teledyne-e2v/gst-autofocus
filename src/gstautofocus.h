@@ -92,16 +92,18 @@ struct _Gstautofocus
     gboolean autofocusLost;
 
     gboolean calibrating;
-    
+    gboolean sharpnessCalculation;
     gboolean listen;
 
     long int sharpness;
 
     char *debugInfo;
-
+    gint benchmark_min_expected_sharpness;
     DebugLevel debugLvl;
 
     gint pdaHoldCmd;
+    gint benchmark_expected_sharpness;
+    gint benchmark_iterations;
 };
 
 int i2c_err=0;

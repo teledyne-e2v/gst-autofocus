@@ -6,7 +6,7 @@
 #include "i2c_control.h"
 #include "logger.h"
 
-#define NB_THREADS 2
+#define NB_THREADS 4
 
 typedef enum
 {
@@ -24,7 +24,10 @@ typedef enum
 typedef enum
 {
     NAIVE,
-    TWO_PHASES
+    TWO_PHASES,
+    WEIGHTED_MEAN,
+    GAUSSIAN_PREDICTION,
+    BENCHMARK
 } AutofocusStrategy;
 
 typedef struct ROI
@@ -41,6 +44,13 @@ typedef struct sharpnessParameters
     long int result;        // The sharpness value
     long int average;       // The average of the pixels on the ROI
 } SharpnessParameters;
+
+
+__attribute__((unused)) static int important_PDA_arg = 0;
+__attribute__((unused)) static int waiting_frames = 0;
+__attribute__((unused)) static int frame = 0;
+__attribute__((unused)) static int proc = 0;
+__attribute__((unused)) static long int sharpness_saved[100];
 
 typedef struct autofocusConf
 {
@@ -59,6 +69,11 @@ typedef struct autofocusConf
     int tmpOffset;
 } AutofocusConf;
 
+__attribute__((unused)) static int calculated_sharpness;
+__attribute__((unused)) static int iteration = 0;
+__attribute__((unused)) static int sum_of_sharpness=0;
+__attribute__((unused)) static int frame_between_autofocus=0;
+__attribute__((unused)) static double bench_accuracy[1000];
 /**
  * @brief Compute the sharpness on a section of the image
  * 
@@ -111,6 +126,14 @@ long int naiveAutofocus(I2CDevice *device, int bus, long int sharpness);
  * @return long int return -1 while the algorithm is in progress, or the sharpness of the frame when the algorimth ended
  */
 long int twoPhaseAutofocus(I2CDevice *device, int bus, long int sharpness);
+
+
+long int weightedMeanAutofocus(I2CDevice *device, int bus, long int sharpness,int* important_PDAs, int nb_important_PDAs, int latency);
+
+long int autofocusBenchmark(I2CDevice *device, int bus,long int sharpness,int* important_PDAs, int nb_important_PDAs, int latency, int number_of_iterations,int expected,int min_expexted, float* results);
+
+
+long int gaussianPredictionAutofocus(I2CDevice *device, int bus, long int sharpness,int* important_PDAs, int nb_important_PDAs, int latency);
 
 /**
  * @brief Reset a given autofocus strategy and reconfigure it

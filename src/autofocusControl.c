@@ -6,12 +6,17 @@
 #include <pthread.h>
 #include <math.h>
 
+#include "curve_fit.h"
+
 static AutofocusConf currentConf;
 void logAutofocusInfo(int nbIter, long int sharpness);
 void goToPDA(I2CDevice *device, int bus, int pda);
+int min_arr(long int * arr, long int len);
+int weightedMean(long int *arr, int *arr_PDA,int nb_important_PDAs);
+int arg_max(long int * arr, long int len);
+bool decreasing(long int * arr, int nb_values);
 
-
-
+int min(int a,int b);
 
 List debugInfo = { NULL, 0 };
 
@@ -194,18 +199,225 @@ GstStructure *s;
 
      sharp = unbiasedSharpnessThread(map.data, width, roi);
 
-    /*for (int y = roi.y; y < roi.y + roi.height - 1; y++)
-    {
-        for (int x = roi.x; x < roi.x + roi.width - 1; x++)
-        {
-            map.data[(y * width) + x] = 0x0;
-        }
-    }*/
+
 
     gst_buffer_unmap(buf, &map);
 
     return sharp;
 }
+
+
+int min_arr(long int * arr, long int len)
+{
+	long int min = arr[0];
+	for(int i=1; i<len; i++)
+	{
+		if(min > arr[i])
+		{
+			min = arr[i];
+		}
+	}
+	return min;
+}
+
+
+
+int arg_max(long int * arr, long int len)
+{
+	long int max = arr[0];
+	int arg=0;
+	for(int i=1; i<len; i++)
+	{
+		if(max < arr[i])
+		{
+			max = arr[i];
+			arg = i;
+		}
+	}
+	return arg;
+}
+
+
+bool decreasing(long int * arr, int nb_values)
+{
+	long int prec_value = arr[0];
+	for(int i=1; i<nb_values; i++)
+	{
+		if(prec_value < arr[i])
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+
+
+int weightedMean(long int *arr, int *arr_PDA,int nb_important_PDAs)
+{
+	long int weighted_mean = 0;
+	long int sum_sharpness = 0;
+	long int min = min_arr(arr,nb_important_PDAs);
+
+
+	for(int i = 0; i < nb_important_PDAs; i++)
+	{
+		weighted_mean += arr_PDA[i] * (arr[i] - min);
+		sum_sharpness += arr[i]- min;
+	}
+
+	weighted_mean = weighted_mean / sum_sharpness;
+
+	return (int) weighted_mean;
+}
+
+
+int min(int a,int b)
+{
+if(a<b)
+return a;
+else
+return b;
+}
+
+
+long int weightedMeanAutofocus(I2CDevice *device, int bus, long int sharpness,int* important_PDAs, int nb_important_PDAs, int latency)
+{
+	printf("entré1");
+	long int res = -1;
+	if(important_PDA_arg<nb_important_PDAs)
+	{	
+		write_VdacPda(*device, bus, important_PDAs[important_PDA_arg]);
+		important_PDA_arg++;
+		if(frame-latency >= 0)
+		{
+			sharpness_saved[frame-latency] = sharpness;
+		}
+		frame++;
+	}
+	else if(waiting_frames<latency)
+	{
+		if(frame-latency >= 0)
+		{
+			sharpness_saved[frame-latency] = sharpness;
+		}
+		waiting_frames++;
+		frame++;
+		goToPDA(device, bus, 0);
+	}
+	else
+	{
+		int weight;
+		if(nb_important_PDAs>5){
+		//int weighted_mean = weightedMean(sharpness_saved,important_PDAs,nb_important_PDAs);
+		int arg = arg_max(sharpness_saved,nb_important_PDAs);
+		int arg1 = min(nb_important_PDAs-arg,arg);
+		int arg2 = min(arg1,5);
+		//int arg3 = min(arg1,3);
+		//int arg4 = min(arg1,2);
+		//int weight1 = weightedMean(sharpness_saved + arg - arg1,important_PDAs + arg - arg1,2*arg1);
+		weight = weightedMean(sharpness_saved + arg - arg2,important_PDAs + arg - arg2,2*arg2);
+		//int weight3 = weightedMean(sharpness_saved + arg - arg3,important_PDAs + arg - arg3,2*arg3);
+		//int weight4 = weightedMean(sharpness_saved + arg - arg4,important_PDAs + arg - arg4,2*arg4);}
+		}
+		else
+		{
+			weight = weightedMean(sharpness_saved,important_PDAs,nb_important_PDAs);
+			printf("weight %d\n",weight);
+		}
+
+		res = sharpness;
+		
+		waiting_frames = 0;
+		frame = 0;
+		important_PDA_arg = 0;
+		if(decreasing(sharpness_saved,4) && nb_important_PDAs >8)
+		{
+			write_VdacPda(*device, bus, -60);
+			return res;
+		}
+		
+		
+		write_VdacPda(*device, bus, (int)weight);
+		printf("out \n");
+
+	}
+	return res;
+}
+
+
+long int gaussianPredictionAutofocus(I2CDevice *device, int bus, long int sharpness,int* important_PDAs, int nb_important_PDAs, int latency)
+{
+
+	long int res = -1;
+	if(important_PDA_arg<nb_important_PDAs)
+	{	
+		write_VdacPda(*device, bus, important_PDAs[important_PDA_arg]);
+
+		important_PDA_arg++;
+		if(frame-latency >= 0)
+		{
+			sharpness_saved[frame-latency] = sharpness;
+		}
+		frame++;
+
+
+	}
+	else if(waiting_frames<latency)
+	{
+		if(frame-latency >= 0)
+		{
+			sharpness_saved[frame-latency] = sharpness;
+		}
+		waiting_frames++;
+		frame++;
+		write_VdacPda(*device, bus,0);
+
+
+	}
+	else
+	{
+
+		double *pdas= (double*)malloc(sizeof(double)*nb_important_PDAs);
+		double *sharp= (double*)malloc(sizeof(double)*nb_important_PDAs);
+		/*if(decreasing(sharpness_saved,4))
+		{
+			write_VdacPda(*device, bus, -60);
+			return res;
+		}*/
+		char tmp[1280];
+		int pda;
+		res = sharpness;
+		tmp[0]=0;
+		//resetDebugInfo();
+		for(int i=0;i<nb_important_PDAs;i++)
+		{
+			if (currentConf.debugLvl >= MINIMAL)
+			{		
+			char tmp1[100];	
+			pdas[i]=important_PDAs[i]/800.0;
+			sharp[i]=(double)sharpness_saved[i];
+			sprintf(tmp1,"PDA : %d sharpness : %ld\n",important_PDAs[i],(long int)sharp[i]);
+
+
+			strcat(tmp,tmp1);
+
+			}
+		}
+
+		insert(&debugInfo, tmp);
+		pda = prediction(pdas,sharp,nb_important_PDAs);
+
+		write_VdacPda(*device, bus, pda);//-(pda*100)/800);
+		waiting_frames = 0;
+		frame = 0;
+		important_PDA_arg = 0;
+
+	}
+	return res;
+}
+
+
 
 long int naiveAutofocus(I2CDevice *device, int bus, long int sharpness)
 {
@@ -326,7 +538,7 @@ long int twoPhaseAutofocus(I2CDevice *device, int bus, long int sharpness)
         {
             if (res < maxSharpness)
             {
-                char tmp[] = "Warning: the best focus was found durring the phase 1\n\tyou might need to recalibrate\n";
+                char tmp[] = "Warning: the best focus was found during the phase 1\n\tyou might need to recalibrate\n";
                 g_print("%s", tmp);
                 insert(&debugInfo, tmp);
 
@@ -385,6 +597,80 @@ void resetAutofocus(AutofocusStrategy strat, AutofocusConf *conf, I2CDevice *dev
     }
 
     goToPDA(device, bus, currentConf.pdaMin);
+}
+
+
+
+long int autofocusBenchmark(I2CDevice *device, int bus,long int sharpness,int* important_PDAs, int nb_important_PDAs, int latency, int number_of_iterations,int expected, int min_expexted, float* results)
+{
+	
+	currentConf.debugLvl = MINIMAL;
+	if(iteration==0)
+	{
+		if(proc==0)
+		{
+			proc=1;
+		
+		}
+		sum_of_sharpness=0;
+	}
+	if(frame_between_autofocus==5 && iteration<number_of_iterations) // this iteration is finished
+	{
+		frame_between_autofocus=0;
+		sum_of_sharpness+=sharpness; // save the sharpness
+		bench_accuracy[iteration]=((float)sharpness-min_expexted)/(expected-min_expexted)*100;
+		iteration++;
+		printf("sharpness : %ld\n",sharpness);
+
+	}
+	if(frame_between_autofocus==0)
+	{
+		printf("rly\n");
+		calculated_sharpness = gaussianPredictionAutofocus(device,bus, sharpness, important_PDAs, nb_important_PDAs, latency);
+		printf("ah oui \n");
+	}
+
+	if(calculated_sharpness != -1)
+	{
+		frame_between_autofocus++;
+	}
+	if(iteration<number_of_iterations)
+	{
+		return -1; //not finished yet
+	}	
+	else
+	{
+		iteration=0;
+		
+		float accuracy_mean = ((float)sum_of_sharpness/number_of_iterations-min_expexted)/(expected-min_expexted)*100;
+
+		float min_sharpness=bench_accuracy[0];
+		float max_sharpness=bench_accuracy[0];
+		double std=0;
+		for (int i=0; i<number_of_iterations; i++)
+		{
+			printf("bench : %f\n",bench_accuracy[i]);
+			if(bench_accuracy[i]>max_sharpness)
+			{
+				max_sharpness=bench_accuracy[i];
+			}
+			else if(bench_accuracy[i]<min_sharpness)
+			{
+				min_sharpness=bench_accuracy[i];	
+			}
+			std+= (accuracy_mean - bench_accuracy[i])*(accuracy_mean - bench_accuracy[i]); // sum (X - mu)²
+		}
+	
+		std=sqrt(std/number_of_iterations); // sqrt( sum (X - mu)² / N )
+		results[0]=accuracy_mean ;
+ 		results[1]=(float)min_sharpness;
+ 		results[2]=(float)max_sharpness;
+ 		results[3]=(float)std;
+		proc=0;
+		printf("fin calcul\n");
+		return sum_of_sharpness; // all measures are done
+	}
+	
 }
 
 void resetDebugInfo(void)
